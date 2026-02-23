@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "student-management"
+        REGISTRY = "docker.io"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                url: 'https://github.com/nihed-eng/student-management.git'
+            }
+        }
+
+        stage('Build Maven') {
+            steps {
+                sh './mvnw clean package -DskipTests'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t student-management .'
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                sh '''
+                docker stop student-management || true
+                docker rm student-management || true
+                docker run -d -p 8080:8080 --name student-management student-management
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline exécutée avec succès'
+        }
+
+        failure {
+            echo 'Pipeline échouée'
+        }
+    }
+}
