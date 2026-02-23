@@ -7,33 +7,30 @@ pipeline {
     }
 
     stages {
-
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                url: 'https://github.com/nihed-eng/student-management.git'
-            }
-        }
+        // We REMOVED the "Checkout" stage because Jenkins does this automatically.
+        // This avoids the 403 error you were seeing!
 
         stage('Build Maven') {
             steps {
+                // We add 'chmod +x' to ensure the script has permission to run
+                sh 'chmod +x mvnw'
                 sh './mvnw clean package -DskipTests'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t student-management .'
+                sh "docker build -t ${IMAGE_NAME} ."
             }
         }
 
         stage('Run Container') {
             steps {
-                sh '''
-                docker stop student-management || true
-                docker rm student-management || true
-                docker run -d -p 8080:8080 --name student-management student-management
-                '''
+                sh """
+                docker stop ${IMAGE_NAME} || true
+                docker rm ${IMAGE_NAME} || true
+                docker run -d -p 8081:8080 --name ${IMAGE_NAME} ${IMAGE_NAME}
+                """
             }
         }
     }
@@ -42,7 +39,6 @@ pipeline {
         success {
             echo 'Pipeline exécutée avec succès'
         }
-
         failure {
             echo 'Pipeline échouée'
         }
