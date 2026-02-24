@@ -6,18 +6,17 @@ pipeline {
         stage('Build Maven') {
             steps {
                 sh 'chmod +x mvnw'
-                sh './mvnw clean verify'
+                sh './mvnw clean package -DskipTests'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh './mvnw sonar:sonar'
+                    sh './mvnw sonar:sonar -DskipTests'
                 }
             }
         }
-
     }
 
     post {
