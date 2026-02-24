@@ -1,7 +1,6 @@
 package tn.esprit.studentmanagement.services;
 
 import tn.esprit.studentmanagement.entities.Department;
-
 import java.util.List;
 
 public interface IDepartmentService {
