@@ -23,6 +23,7 @@ pipeline {
         success {
             echo 'Pipeline exécutée avec succès'
         }
+
         failure {
             echo 'Pipeline échouée'
         }
