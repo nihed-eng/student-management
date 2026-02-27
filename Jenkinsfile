@@ -22,11 +22,16 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
-            steps {
-                sh './mvnw test'
-            }
-        }
+      stage('Run Tests') {
+    steps {
+        sh './mvnw test -Dspring.profiles.active=test ' +
+           '-Dspring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL ' +
+           '-Dspring.datasource.driverClassName=org.h2.Driver ' +
+           '-Dspring.datasource.username=sa ' +
+           '-Dspring.datasource.password= ' +
+           '-Dspring.jpa.database-platform=org.hibernate.dialect.H2Dialect'
+    }
+}
 
         stage('SonarQube Analysis') {
             steps {
