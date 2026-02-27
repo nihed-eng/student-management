@@ -14,17 +14,19 @@ pipeline {
             }
         }
 
-        stage('Setup MySQL Container') {
-            steps {
-                // On lance MySQL dans Docker. Le nom 'mysql-db' servira d'host.
-                // On utilise le réseau 'host' pour que localhost:3306 fonctionne direct.
-                sh 'docker run -d --name student-mysql --network host -e MYSQL_ROOT_PASSWORD= -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=studentdb mysql:8.0'
-                
-                // On attend 20 secondes que MySQL finisse de démarrer
-                echo "Waiting for MySQL to be ready..."
-                sleep 20
-            }
-        }
+      stage('Setup MySQL Container') {
+    steps {
+        sh '''
+        docker rm -f student-mysql || true
+
+        docker run -d --name student-mysql --network host \
+        -e MYSQL_ROOT_PASSWORD= \
+        -e MYSQL_ALLOW_EMPTY_PASSWORD=yes \
+        -e MYSQL_DATABASE=studentdb \
+        mysql:8.0
+        '''
+    }
+}
 
         stage('Build & Test Maven') {
             steps {
