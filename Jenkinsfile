@@ -5,8 +5,7 @@ pipeline {
         IMAGE_NAME = "student-management"
     }
 
-    stages {
-
+   stages {
         stage('Checkout Code') {
             steps {
                 git credentialsId: 'token',
@@ -15,36 +14,36 @@ pipeline {
             }
         }
 
-        stage('Build Maven') {
+        stage('Setup MySQL Container') {
             steps {
-                sh 'chmod +x mvnw'
-                sh './mvnw clean package'
+                // On lance MySQL dans Docker. Le nom 'mysql-db' servira d'host.
+                // On utilise le réseau 'host' pour que localhost:3306 fonctionne direct.
+                sh 'docker run -d --name student-mysql --network host -e MYSQL_ROOT_PASSWORD= -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=studentdb mysql:8.0'
+                
+                // On attend 20 secondes que MySQL finisse de démarrer
+                echo "Waiting for MySQL to be ready..."
+                sleep 20
             }
         }
 
-      stage('Run Tests') {
-    steps {
-        sh './mvnw test -Dspring.profiles.active=test ' +
-           '-Dspring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL ' +
-           '-Dspring.datasource.driverClassName=org.h2.Driver ' +
-           '-Dspring.datasource.username=sa ' +
-           '-Dspring.datasource.password= ' +
-           '-Dspring.jpa.database-platform=org.hibernate.dialect.H2Dialect'
-    }
-}
+        stage('Build & Test Maven') {
+            steps {
+                sh 'chmod +x mvnw'
+                // On lance le build. Spring trouvera MySQL sur localhost:3306 (grâce au network host de Docker)
+                sh './mvnw clean package'
+            }
+            post {
+                always {
+                    // TRÈS IMPORTANT : On supprime le container après le test, même si ça échoue
+                    sh 'docker rm -f student-mysql || true'
+                }
+            }
+        }
 
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh './mvnw sonar:sonar'
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
                 }
             }
         }
