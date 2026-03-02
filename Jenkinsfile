@@ -26,13 +26,13 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh './mvnw sonar:sonar'
-                }
-            }
+       stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('SonarQube') {
+            sh './mvnw sonar:sonar'
         }
+    }
+}
 
         stage('Quality Gate') {
             steps {
