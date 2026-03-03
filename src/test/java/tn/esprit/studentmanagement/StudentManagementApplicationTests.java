@@ -10,8 +10,11 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import tn.esprit.studentmanagement.services.StudentService;
+import tn.esprit.studentmanagement.repositories.StudentRepository;
+
 @SpringBootTest
-class StudentServiceTest {
+public class StudentManagementApplicationTests {
 
     @Autowired
     private StudentService studentService;
@@ -24,7 +27,7 @@ class StudentServiceTest {
 
         when(studentRepository.findAll()).thenReturn(List.of());
 
-        List<Student> students = studentService.getAllStudents();
+        List<?> students = studentService.getAllStudents();
 
         assertNotNull(students);
     }
