@@ -8,9 +8,10 @@ pipeline {
     }
 
     environment {
-        SONAR_HOST = "http://192.168.49.2:9000"
+        SONAR_HOST = "http://192.168.56.10:9000"
         IMAGE_NAME = "student-app"
         IMAGE_TAG = "1.0"
+        CONTAINER_NAME = "student-app"
     }
 
     stages {
@@ -18,18 +19,18 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                url: 'git@github.com:nihed-eng/student-management.git'
+                    url: 'git@github.com:nihed-eng/student-management.git'
             }
         }
 
-     stage('Build & Test') {
-    steps {
-        sh """
-            chmod +x mvnw
-            ./mvnw clean package -DskipTests
-        """
-    }
-}
+        stage('Build & Package') {
+            steps {
+                sh '''
+                    chmod +x mvnw
+                    ./mvnw clean package -DskipTests
+                '''
+            }
+        }
 
         stage('SonarQube Analysis') {
             steps {
@@ -38,7 +39,7 @@ pipeline {
                         sh """
                             ./mvnw sonar:sonar \
                             -Dsonar.host.url=${SONAR_HOST} \
-                            -Dsonar.login=${SONAR_TOKEN} \
+                            -Dsonar.login=$SONAR_TOKEN \
                             -Dsonar.qualitygate.wait=true
                         """
                     }
@@ -54,11 +55,14 @@ pipeline {
             }
         }
 
-        stage('Run Container') {
+        stage('Deploy Container') {
             steps {
                 sh """
-                    docker rm -f student-app || true
-                    docker run -d --name student-app -p 8089:8089 ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker rm -f ${CONTAINER_NAME} || true
+                    docker run -d \
+                        --name ${CONTAINER_NAME} \
+                        -p 8089:8089 \
+                        ${IMAGE_NAME}:${IMAGE_TAG}
                 """
             }
         }
@@ -70,7 +74,11 @@ pipeline {
         }
 
         failure {
-            echo "❌ Pipeline échoué"
+            echo "❌ Pipeline échoué - vérifier logs"
+        }
+
+        always {
+            echo "📌 Fin du pipeline"
         }
     }
 }
