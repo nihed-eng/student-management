@@ -5,7 +5,7 @@ pipeline {
         DOCKER_IMAGE = "nihedmath/student-app"
         DOCKER_TAG = "${BUILD_NUMBER}"
     }
-
+    
     stages {
 
         stage('Checkout') {
