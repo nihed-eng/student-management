@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        DOCKER_IMAGE = "nihedmath/student-app"
+        DOCKER_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -14,7 +20,6 @@ pipeline {
         stage('Build & Test') {
             steps {
                 sh 'chmod +x mvnw'
-
                 sh """
                 ./mvnw clean package \
                 -Dspring.datasource.url="jdbc:h2:mem:testdb;MODE=MySQL" \
@@ -26,13 +31,13 @@ pipeline {
             }
         }
 
-       stage('SonarQube Analysis') {
-    steps {
-        withSonarQubeEnv('SonarQube') {
-            sh './mvnw sonar:sonar'
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh './mvnw sonar:sonar'
+                }
+            }
         }
-    }
-}
 
         stage('Quality Gate') {
             steps {
@@ -41,15 +46,37 @@ pipeline {
                 }
             }
         }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
+                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                sh "docker push ${DOCKER_IMAGE}:latest"
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh "kubectl apply -f k8s/ -n devops"
+                sh "kubectl set image deployment/spring-app spring=${DOCKER_IMAGE}:${DOCKER_TAG} -n devops"
+                sh "kubectl rollout status deployment/spring-app -n devops"
+            }
+        }
     }
 
     post {
         success {
-            echo 'Pipeline exécutée avec succès'
+            echo '✅ Pipeline exécutée avec succès'
         }
-
         failure {
-            echo 'Pipeline échouée'
+            echo '❌ Pipeline échouée'
         }
     }
 }
