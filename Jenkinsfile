@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_IMAGE = "nihedmath/student-app"
         DOCKER_TAG = "${BUILD_NUMBER}"
     }
@@ -56,9 +55,15 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                sh "echo ${DOCKERHUB_CREDENTIALS_PSW} | docker login -u ${DOCKERHUB_CREDENTIALS_USR} --password-stdin"
-                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                sh "docker push ${DOCKER_IMAGE}:latest"
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-credentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                    sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    sh "docker push ${DOCKER_IMAGE}:latest"
+                }
             }
         }
 
