@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-app
+  namespace: devops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring
+  template:
+    metadata:
+      labels:
+        app: spring
+    spec:
+      containers:
+      - name: spring
+        image: nihedmath/student-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8089
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:mysql://mysqlservice.devops.svc.cluster.local:3306/studentdb
+        - name: SPRING_DATASOURCE_USERNAME
+          value: root
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: root
