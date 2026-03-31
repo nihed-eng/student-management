@@ -22,14 +22,14 @@ pipeline {
             }
         }
 
-        stage('Build & Test') {
-            steps {
-                sh """
-                    chmod +x mvnw
-                    ./mvnw clean package -DskipTests=false
-                """
-            }
-        }
+     stage('Build & Test') {
+    steps {
+        sh """
+            chmod +x mvnw
+            ./mvnw clean package -DskipTests
+        """
+    }
+}
 
         stage('SonarQube Analysis') {
             steps {
