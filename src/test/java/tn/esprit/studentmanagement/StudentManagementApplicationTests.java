@@ -14,7 +14,7 @@ import tn.esprit.studentmanagement.services.StudentService;
 import tn.esprit.studentmanagement.repositories.StudentRepository;
 
 @SpringBootTest
-public class StudentManagementApplicationTests {
+class StudentManagementApplicationTests {
 
     @Autowired
     private StudentService studentService;
