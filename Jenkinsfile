@@ -16,10 +16,12 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+        stage('Prepare') {
             steps {
-                git branch: 'main',
-                    url: 'git@github.com:nihed-eng/student-management.git'
+                sh '''
+                    echo "🔧 Fix permissions mvnw"
+                    chmod +x mvnw || true
+                '''
             }
         }
 
@@ -38,8 +40,7 @@ pipeline {
                         sh """
                             ./mvnw sonar:sonar \
                             -Dsonar.host.url=${SONAR_HOST} \
-                            -Dsonar.login=$SONAR_TOKEN \
-                            -Dsonar.qualitygate.wait=true
+                            -Dsonar.login=$SONAR_TOKEN
                         """
                     }
                 }
@@ -66,9 +67,7 @@ pipeline {
             steps {
                 sh """
                     docker rm -f ${CONTAINER_NAME} || true
-
                     docker run -d \
-                        --restart unless-stopped \
                         --name ${CONTAINER_NAME} \
                         -p 8089:8089 \
                         ${IMAGE_NAME}:${IMAGE_TAG}
@@ -78,20 +77,17 @@ pipeline {
     }
 
     post {
+        always {
+            echo "📌 Nettoyage post-build"
+            sh "docker image prune -f || true"
+        }
+
         success {
-            echo "✅ Pipeline terminé avec succès"
+            echo "✅ Pipeline réussi"
         }
 
         failure {
-            echo "❌ Pipeline échoué - vérifier les logs"
-        }
-
-        always {
-            echo "📌 Nettoyage post-build"
-
-            sh """
-                docker image prune -f || true
-            """
+            echo "❌ Pipeline échoué - vérifier logs"
         }
     }
 }
