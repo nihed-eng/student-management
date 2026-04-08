@@ -4,7 +4,7 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
-        timeout(time: 20, unit: 'MINUTES')
+        timeout(time: 30, unit: 'MINUTES')
     }
 
     environment {
@@ -18,18 +18,13 @@ pipeline {
 
         stage('Prepare') {
             steps {
-                sh '''
-                    echo "🔧 Fix permissions mvnw"
-                    chmod +x mvnw || true
-                '''
+                sh 'chmod +x mvnw || true'
             }
         }
 
         stage('Build & Package') {
             steps {
-                sh '''
-                    ./mvnw clean package -DskipTests
-                '''
+                sh './mvnw clean package -DskipTests'
             }
         }
 
@@ -49,17 +44,20 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                timeout(time: 10, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "❌ Quality Gate failed: ${qg.status}"
+                        }
+                    }
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh """
-                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                """
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
@@ -78,16 +76,7 @@ pipeline {
 
     post {
         always {
-            echo "📌 Nettoyage post-build"
-            sh "docker image prune -f || true"
-        }
-
-        success {
-            echo "✅ Pipeline réussi"
-        }
-
-        failure {
-            echo "❌ Pipeline échoué - vérifier logs"
+            sh 'docker image prune -f || true'
         }
     }
 }
