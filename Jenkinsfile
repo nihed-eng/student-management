@@ -26,7 +26,6 @@ pipeline {
         stage('Build & Package') {
             steps {
                 sh '''
-                    chmod +x mvnw
                     ./mvnw clean package -DskipTests
                 '''
             }
@@ -47,6 +46,14 @@ pipeline {
             }
         }
 
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh """
@@ -59,7 +66,9 @@ pipeline {
             steps {
                 sh """
                     docker rm -f ${CONTAINER_NAME} || true
+
                     docker run -d \
+                        --restart unless-stopped \
                         --name ${CONTAINER_NAME} \
                         -p 8089:8089 \
                         ${IMAGE_NAME}:${IMAGE_TAG}
@@ -74,11 +83,15 @@ pipeline {
         }
 
         failure {
-            echo "❌ Pipeline échoué - vérifier logs"
+            echo "❌ Pipeline échoué - vérifier les logs"
         }
 
         always {
-            echo "📌 Fin du pipeline"
+            echo "📌 Nettoyage post-build"
+
+            sh """
+                docker image prune -f || true
+            """
         }
     }
 }
