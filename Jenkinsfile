@@ -16,11 +16,11 @@ pipeline {
 
     stages {
 
-       stage('Checkout Code') {
-    steps {
-        git credentialsId: 'github-token', url: 'https://github.com/nihed-eng/student-management.git'
-    }
-}
+        stage('Checkout Code') {
+            steps {
+                echo "✔ Code already checked out by Jenkins SCM"
+            }
+        }
 
         stage('Prepare') {
             steps {
@@ -91,10 +91,11 @@ pipeline {
 
     post {
         success {
-            echo "✅ Pipeline Kubernetes + Sonar + Docker OK"
+            echo "✅ Pipeline SUCCESS: build + sonar + docker + k8s OK"
         }
+
         failure {
-            echo "❌ Pipeline failed"
+            echo "❌ Pipeline FAILED"
         }
     }
 }
