@@ -10,9 +10,13 @@ pipeline {
 
     environment {
         SONAR_HOST = "http://192.168.56.10:9000"
-        IMAGE_NAME = "nihed/student-management"
+
+        // 🔥 CORRECTION ICI (IMPORTANT)
+        IMAGE_NAME = "nihedmath/student-management"
+
         IMAGE_TAG  = "${BUILD_NUMBER}"
-        K8S_NAMESPACE = "devops"
+
+        K8S_NAMESPACE   = "devops"
         DEPLOYMENT_NAME = "spring-app"
         CONTAINER_NAME  = "spring-app"
     }
@@ -82,6 +86,8 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
+                    kubectl apply -f k8s/ -n $K8S_NAMESPACE || true
+
                     kubectl set image deployment/$DEPLOYMENT_NAME \
                     $CONTAINER_NAME=$IMAGE_NAME:$IMAGE_TAG \
                     -n $K8S_NAMESPACE
@@ -104,7 +110,7 @@ pipeline {
 
     post {
         success {
-            echo "✅ PIPELINE SUCCESS: Build → Sonar → Docker → K8s"
+            echo "✅ PIPELINE SUCCESS: Build → Sonar → Docker → Kubernetes"
         }
         failure {
             echo "❌ PIPELINE FAILED"
