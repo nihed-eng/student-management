@@ -16,6 +16,12 @@ pipeline {
 
     stages {
 
+        stage('Checkout Code') {
+            steps {
+                git credentialsId: 'git-credentials', url: 'https://github.com/nihed-eng/student-management.git'
+            }
+        }
+
         stage('Prepare') {
             steps {
                 sh 'chmod +x mvnw || true'
@@ -85,10 +91,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Pipeline Kubernetes exécuté avec succès"
+            echo "✅ Pipeline Kubernetes + Sonar + Docker OK"
         }
         failure {
-            echo "❌ Pipeline échoué"
+            echo "❌ Pipeline failed"
         }
     }
 }
