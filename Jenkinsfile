@@ -18,7 +18,7 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                echo "✔ Code already checked out by Jenkins SCM"
+                checkout scm
             }
         }
 
@@ -38,12 +38,12 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                        sh """
-                        ./mvnw sonar:sonar \
-                        -Dsonar.host.url=${SONAR_HOST} \
-                        -Dsonar.login=${SONAR_TOKEN}
-                        """
-                    }
+    sh '''
+    ./mvnw sonar:sonar \
+    -Dsonar.host.url=$SONAR_HOST \
+    -Dsonar.login=$SONAR_TOKEN
+    '''
+}
                 }
             }
         }
