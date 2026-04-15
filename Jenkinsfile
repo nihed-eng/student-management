@@ -11,9 +11,7 @@ pipeline {
     environment {
         SONAR_HOST = "http://192.168.56.10:9000"
 
-        // 🔥 CORRECTION ICI (IMPORTANT)
         IMAGE_NAME = "nihedmath/student-management"
-
         IMAGE_TAG  = "${BUILD_NUMBER}"
 
         K8S_NAMESPACE   = "devops"
@@ -60,9 +58,11 @@ pipeline {
             }
         }
 
+        // 🔥 FIX IMPORTANT (pull image public)
         stage('Build Docker Image') {
             steps {
                 sh '''
+                    docker logout || true
                     docker build -t $IMAGE_NAME:$IMAGE_TAG .
                 '''
             }
@@ -78,6 +78,7 @@ pipeline {
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker push $IMAGE_NAME:$IMAGE_TAG
+                        docker logout
                     '''
                 }
             }
