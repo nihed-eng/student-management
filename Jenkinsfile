@@ -9,7 +9,7 @@ pipeline {
     }
 
     environment {
-        SONAR_HOST = "http://host.docker.internal:9000"
+        SONAR_HOST = "http://192.168.56.10:9000"
         IMAGE_NAME = "nihed/student-management"
         IMAGE_TAG  = "${BUILD_NUMBER}"
         K8S_NAMESPACE = "devops"
@@ -34,7 +34,7 @@ pipeline {
             }
         }
 
-        stage('SonarQube') {
+        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
@@ -56,7 +56,7 @@ pipeline {
             }
         }
 
-        stage('Docker Build') {
+        stage('Build Docker Image') {
             steps {
                 sh '''
                     docker build -t $IMAGE_NAME:$IMAGE_TAG .
@@ -64,18 +64,22 @@ pipeline {
             }
         }
 
-        stage('Docker Push') {
+        stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     sh '''
-                        echo $PASS | docker login -u $USER --password-stdin
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker push $IMAGE_NAME:$IMAGE_TAG
                     '''
                 }
             }
         }
 
-        stage('Deploy K8s') {
+        stage('Deploy to Kubernetes') {
             steps {
                 sh '''
                     kubectl set image deployment/$DEPLOYMENT_NAME \
@@ -88,7 +92,7 @@ pipeline {
             }
         }
 
-        stage('Verify') {
+        stage('Verify Deployment') {
             steps {
                 sh '''
                     kubectl get pods -n $K8S_NAMESPACE
@@ -100,10 +104,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ SUCCESS"
+            echo "✅ PIPELINE SUCCESS: Build → Sonar → Docker → K8s"
         }
         failure {
-            echo "❌ FAILED"
+            echo "❌ PIPELINE FAILED"
         }
         always {
             cleanWs()
