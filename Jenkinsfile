@@ -30,12 +30,12 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                    withSonarQubeEnv('SonarQube') {
+                withSonarQubeEnv('SonarQube') {
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         sh """
                             ./mvnw sonar:sonar \
                             -Dsonar.host.url=${SONAR_HOST} \
-                            -Dsonar.login=$SONAR_TOKEN
+                            -Dsonar.login=${SONAR_TOKEN}
                         """
                     }
                 }
@@ -48,7 +48,7 @@ pipeline {
                     script {
                         def qg = waitForQualityGate()
                         if (qg.status != 'OK') {
-                            error "❌ Quality Gate failed: ${qg.status}"
+                            error("❌ Quality Gate failed: ${qg.status}")
                         }
                     }
                 }
@@ -77,6 +77,12 @@ pipeline {
     post {
         always {
             sh 'docker image prune -f || true'
+        }
+        success {
+            echo "✅ Pipeline exécuté avec succès !"
+        }
+        failure {
+            echo "❌ Pipeline échoué !"
         }
     }
 }
