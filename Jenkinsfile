@@ -16,11 +16,11 @@ pipeline {
 
     stages {
 
-        stage('Checkout Code') {
-            steps {
-                git credentialsId: 'git-credentials', url: 'https://github.com/nihed-eng/student-management.git'
-            }
-        }
+       stage('Checkout Code') {
+    steps {
+        git credentialsId: 'github-token', url: 'https://github.com/nihed-eng/student-management.git'
+    }
+}
 
         stage('Prepare') {
             steps {
