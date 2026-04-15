@@ -9,9 +9,9 @@ pipeline {
 
     environment {
         SONAR_HOST = "http://192.168.56.10:9000"
-        IMAGE_NAME = "student-app"
+        IMAGE_NAME = "student-management"
         IMAGE_TAG = "1.0"
-        CONTAINER_NAME = "student-app"
+        NAMESPACE = "devops"
     }
 
     stages {
@@ -33,9 +33,9 @@ pipeline {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         sh """
-                            ./mvnw sonar:sonar \
-                            -Dsonar.host.url=${SONAR_HOST} \
-                            -Dsonar.login=${SONAR_TOKEN}
+                        ./mvnw sonar:sonar \
+                        -Dsonar.host.url=${SONAR_HOST} \
+                        -Dsonar.login=${SONAR_TOKEN}
                         """
                     }
                 }
@@ -55,34 +55,40 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Docker Image (Minikube)') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh """
+                eval \$(minikube docker-env)
+                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                """
             }
         }
 
-        stage('Deploy Container') {
+        stage('Deploy to Kubernetes') {
             steps {
                 sh """
-                    docker rm -f ${CONTAINER_NAME} || true
-                    docker run -d \
-                        --name ${CONTAINER_NAME} \
-                        -p 8089:8089 \
-                        ${IMAGE_NAME}:${IMAGE_TAG}
+                kubectl apply -f k8s/ -n ${NAMESPACE}
+                kubectl rollout restart deployment spring-app -n ${NAMESPACE}
+                """
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh """
+                kubectl get pods -n ${NAMESPACE}
+                kubectl get svc -n ${NAMESPACE}
                 """
             }
         }
     }
 
     post {
-        always {
-            sh 'docker image prune -f || true'
-        }
         success {
-            echo "✅ Pipeline exécuté avec succès !"
+            echo "✅ Pipeline Kubernetes exécuté avec succès"
         }
         failure {
-            echo "❌ Pipeline échoué !"
+            echo "❌ Pipeline échoué"
         }
     }
 }
