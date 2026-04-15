@@ -4,31 +4,36 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
         timeout(time: 30, unit: 'MINUTES')
     }
 
     environment {
         SONAR_HOST = "http://192.168.56.10:9000"
-        IMAGE_NAME = "student-management"
-        IMAGE_TAG = "1.0"
-        NAMESPACE = "devops"
+
+        IMAGE_NAME = "nihed/student-management"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        K8S_NAMESPACE = "devops"
+        DEPLOYMENT_NAME = "spring-app"
+        CONTAINER_NAME = "spring-app"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Prepare') {
+        stage('Prepare Maven') {
             steps {
-                sh 'chmod +x mvnw || true'
+                sh 'chmod +x mvnw'
             }
         }
 
-        stage('Build & Package') {
+        stage('Build & Test') {
             steps {
                 sh './mvnw clean package -DskipTests'
             }
@@ -48,27 +53,39 @@ pipeline {
             }
         }
 
-        // ✅ VERSION SIMPLE (pas de blocage)
         stage('Quality Gate') {
             steps {
-                echo "Skipping Quality Gate (simple mode for TP)"
+                timeout(time: 10, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "❌ Quality Gate failed: ${qg.status}"
+                        }
+                    }
+                }
             }
         }
 
-        stage('Build Docker Image (Minikube)') {
+        stage('Build Docker Image') {
             steps {
-                sh '''
-                eval $(minikube docker-env)
-                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                '''
+                script {
+                    sh """
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    """
+                }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
                 sh """
-                kubectl apply -f k8s/ -n ${NAMESPACE}
-                kubectl rollout restart deployment spring-app -n ${NAMESPACE}
+                kubectl apply -f k8s/ -n ${K8S_NAMESPACE}
+
+                kubectl set image deployment/${DEPLOYMENT_NAME} \
+                ${CONTAINER_NAME}=${IMAGE_NAME}:${IMAGE_TAG} \
+                -n ${K8S_NAMESPACE}
+
+                kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE}
                 """
             }
         }
@@ -76,8 +93,8 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh """
-                kubectl get pods -n ${NAMESPACE}
-                kubectl get svc -n ${NAMESPACE}
+                kubectl get pods -n ${K8S_NAMESPACE}
+                kubectl get svc -n ${K8S_NAMESPACE}
                 """
             }
         }
@@ -85,11 +102,15 @@ pipeline {
 
     post {
         success {
-            echo "✅ Pipeline SUCCESS: build + sonar + docker + kubernetes OK"
+            echo "✅ PIPELINE SUCCESS: Build → Sonar → Docker → Kubernetes deployed"
         }
 
         failure {
-            echo "❌ Pipeline FAILED"
+            echo "❌ PIPELINE FAILED: check logs"
+        }
+
+        always {
+            cleanWs()
         }
     }
 }
