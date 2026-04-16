@@ -41,9 +41,9 @@ pipeline {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         sh '''
-                            ./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
+                            ./mvnw sonar:sonar \
                               -Dsonar.host.url=$SONAR_HOST \
-                              -Dsonar.login=$SONAR_TOKEN
+                              -Dsonar.token=$SONAR_TOKEN
                         '''
                     }
                 }
@@ -87,19 +87,19 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "📦 Namespace check..."
+                    echo "📦 Checking namespace..."
                     kubectl get namespace $K8S_NAMESPACE || kubectl create namespace $K8S_NAMESPACE
 
-                    echo "📂 Apply manifests..."
+                    echo "📂 Applying Kubernetes manifests..."
                     kubectl apply -f k8s/ -n $K8S_NAMESPACE
 
-                    echo "🚀 Update image..."
+                    echo "🚀 Updating deployment image..."
                     kubectl set image deployment/$DEPLOYMENT_NAME \
                     $CONTAINER_NAME=$IMAGE_NAME:$IMAGE_TAG \
                     -n $K8S_NAMESPACE
 
-                    echo "⏳ Waiting for deployment..."
-                    kubectl wait --for=condition=available deployment/$DEPLOYMENT_NAME \
+                    echo "⏳ Waiting for rollout..."
+                    kubectl rollout status deployment/$DEPLOYMENT_NAME \
                     -n $K8S_NAMESPACE --timeout=300s
                 '''
             }
