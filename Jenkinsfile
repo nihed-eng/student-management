@@ -58,7 +58,6 @@ pipeline {
             }
         }
 
-        // 🔥 FIX IMPORTANT (pull image public)
         stage('Build Docker Image') {
             steps {
                 sh '''
@@ -87,12 +86,18 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                    kubectl apply -f k8s/ -n $K8S_NAMESPACE || true
+                    # 🔥 Créer namespace si n'existe pas
+                    kubectl get namespace $K8S_NAMESPACE || kubectl create namespace $K8S_NAMESPACE
 
+                    # Appliquer manifests
+                    kubectl apply -f k8s/ -n $K8S_NAMESPACE
+
+                    # Mettre à jour image
                     kubectl set image deployment/$DEPLOYMENT_NAME \
                     $CONTAINER_NAME=$IMAGE_NAME:$IMAGE_TAG \
                     -n $K8S_NAMESPACE
 
+                    # Attendre rollout
                     kubectl rollout status deployment/$DEPLOYMENT_NAME \
                     -n $K8S_NAMESPACE --timeout=120s
                 '''
@@ -102,8 +107,8 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
-                    kubectl get pods -n $K8S_NAMESPACE
-                    kubectl get svc -n $K8S_NAMESPACE
+                    kubectl get pods -n $K8S_NAMESPACE || true
+                    kubectl get svc -n $K8S_NAMESPACE || true
                 '''
             }
         }
