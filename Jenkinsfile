@@ -16,7 +16,7 @@ pipeline {
 
         K8S_NAMESPACE   = "devops"
         DEPLOYMENT_NAME = "spring-app"
-        CONTAINER_NAME  = "spring"   // ✅ correspond à Kubernetes
+        CONTAINER_NAME  = "spring"
     }
 
     stages {
@@ -41,7 +41,7 @@ pipeline {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         sh '''
-                            ./mvnw sonar:sonar \
+                            ./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
                               -Dsonar.host.url=$SONAR_HOST \
                               -Dsonar.login=$SONAR_TOKEN
                         '''
@@ -61,7 +61,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    docker logout || true
                     docker build -t $IMAGE_NAME:$IMAGE_TAG .
                 '''
             }
@@ -94,18 +93,14 @@ pipeline {
                     echo "📂 Apply manifests..."
                     kubectl apply -f k8s/ -n $K8S_NAMESPACE
 
-                    echo "🔍 Vérification du container name..."
-                    kubectl get deployment $DEPLOYMENT_NAME -n $K8S_NAMESPACE \
-                    -o jsonpath='{.spec.template.spec.containers[*].name}'
-
-                    echo "🚀 Mise à jour image..."
+                    echo "🚀 Update image..."
                     kubectl set image deployment/$DEPLOYMENT_NAME \
                     $CONTAINER_NAME=$IMAGE_NAME:$IMAGE_TAG \
                     -n $K8S_NAMESPACE
 
-                    echo "⏳ Attente du rollout..."
-                    kubectl rollout status deployment/$DEPLOYMENT_NAME \
-                    -n $K8S_NAMESPACE --timeout=120s
+                    echo "⏳ Waiting for deployment..."
+                    kubectl wait --for=condition=available deployment/$DEPLOYMENT_NAME \
+                    -n $K8S_NAMESPACE --timeout=300s
                 '''
             }
         }
