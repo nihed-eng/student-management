@@ -16,7 +16,7 @@ pipeline {
 
         K8S_NAMESPACE   = "devops"
         DEPLOYMENT_NAME = "spring-app"
-        CONTAINER_NAME  = "spring-app"
+        CONTAINER_NAME  = "spring"   // ✅ correspond à Kubernetes
     }
 
     stages {
@@ -86,18 +86,24 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                    # 🔥 Créer namespace si n'existe pas
+                    set -e
+
+                    echo "📦 Namespace check..."
                     kubectl get namespace $K8S_NAMESPACE || kubectl create namespace $K8S_NAMESPACE
 
-                    # Appliquer manifests
+                    echo "📂 Apply manifests..."
                     kubectl apply -f k8s/ -n $K8S_NAMESPACE
 
-                    # Mettre à jour image
+                    echo "🔍 Vérification du container name..."
+                    kubectl get deployment $DEPLOYMENT_NAME -n $K8S_NAMESPACE \
+                    -o jsonpath='{.spec.template.spec.containers[*].name}'
+
+                    echo "🚀 Mise à jour image..."
                     kubectl set image deployment/$DEPLOYMENT_NAME \
                     $CONTAINER_NAME=$IMAGE_NAME:$IMAGE_TAG \
                     -n $K8S_NAMESPACE
 
-                    # Attendre rollout
+                    echo "⏳ Attente du rollout..."
                     kubectl rollout status deployment/$DEPLOYMENT_NAME \
                     -n $K8S_NAMESPACE --timeout=120s
                 '''
@@ -107,8 +113,11 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
-                    kubectl get pods -n $K8S_NAMESPACE || true
-                    kubectl get svc -n $K8S_NAMESPACE || true
+                    echo "📊 Pods:"
+                    kubectl get pods -n $K8S_NAMESPACE
+
+                    echo "🌐 Services:"
+                    kubectl get svc -n $K8S_NAMESPACE
                 '''
             }
         }
