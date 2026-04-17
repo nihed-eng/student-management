@@ -14,7 +14,7 @@ spec:
         app: spring
     spec:
       containers:
-      - name: spring
+      - name: spring-app
         image: nihedmath/student-management:latest
         imagePullPolicy: Never
         ports:
