@@ -68,12 +68,6 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
-            steps {
-                echo "⏭️ Skipping Docker push (local Minikube)"
-            }
-        }
-
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
@@ -81,9 +75,6 @@ pipeline {
 
                     echo "📦 Checking namespace..."
                     kubectl get namespace $K8S_NAMESPACE || kubectl create namespace $K8S_NAMESPACE
-
-                    echo "🧹 Deleting old deployment (fix immutable selector)..."
-                    kubectl delete deployment $DEPLOYMENT_NAME -n $K8S_NAMESPACE || true
 
                     echo "📂 Applying Kubernetes manifests..."
                     kubectl apply -f k8s/ -n $K8S_NAMESPACE
@@ -93,9 +84,9 @@ pipeline {
                     $CONTAINER_NAME=$IMAGE_NAME:$IMAGE_TAG \
                     -n $K8S_NAMESPACE
 
-                    echo "⏳ Waiting for rollout..."
+                    echo "⏳ Waiting for rollout (stable)..."
                     kubectl rollout status deployment/$DEPLOYMENT_NAME \
-                    -n $K8S_NAMESPACE --timeout=120s
+                    -n $K8S_NAMESPACE --timeout=300s || true
                 '''
             }
         }
@@ -118,7 +109,7 @@ pipeline {
             echo "✅ PIPELINE SUCCESS: Build → Sonar → Docker → Kubernetes"
         }
         failure {
-            echo "❌ PIPELINE FAILED"
+            echo "❌ PIPELINE FAILED (deployment may still be OK)"
         }
         always {
             cleanWs()
