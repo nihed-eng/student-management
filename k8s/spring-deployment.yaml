@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: spring
-        image: nihedmath/student-app:latest
-        imagePullPolicy: Always
+        image: nihedmath/student-management:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 8089
         env:
