@@ -82,11 +82,11 @@ pipeline {
                     echo "📦 Checking namespace..."
                     kubectl get namespace $K8S_NAMESPACE || kubectl create namespace $K8S_NAMESPACE
 
+                    echo "🧹 Deleting old deployment (fix immutable selector)..."
+                    kubectl delete deployment $DEPLOYMENT_NAME -n $K8S_NAMESPACE || true
+
                     echo "📂 Applying Kubernetes manifests..."
                     kubectl apply -f k8s/ -n $K8S_NAMESPACE
-
-                    echo "🔄 Restart pods..."
-                    kubectl delete pod -l app=spring-app -n $K8S_NAMESPACE || true
 
                     echo "🚀 Updating deployment image..."
                     kubectl set image deployment/$DEPLOYMENT_NAME \
