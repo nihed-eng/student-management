@@ -16,7 +16,7 @@ pipeline {
 
         K8S_NAMESPACE   = "devops"
         DEPLOYMENT_NAME = "spring-app"
-        CONTAINER_NAME  = "spring"
+        CONTAINER_NAME  = "spring-app"
     }
 
     stages {
