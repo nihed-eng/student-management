@@ -7,22 +7,33 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: spring
+      app: spring-app
   template:
     metadata:
       labels:
-        app: spring
+        app: spring-app
     spec:
       containers:
-      - name: spring-app
-        image: nihedmath/student-management:latest
-        imagePullPolicy: Never
-        ports:
-        - containerPort: 8089
-        env:
-        - name: SPRING_DATASOURCE_URL
-          value: jdbc:mysql://mysqlservice.devops.svc.cluster.local:3306/studentdb
-        - name: SPRING_DATASOURCE_USERNAME
-          value: root
-        - name: SPRING_DATASOURCE_PASSWORD
-          value: root
+        - name: spring-app
+          image: nihedmath/student-management:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: spring-config
+                  key: SPRING_DATASOURCE_URL
+
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: spring-secret
+                  key: SPRING_DATASOURCE_USERNAME
+
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: spring-secret
+                  key: SPRING_DATASOURCE_PASSWORD
