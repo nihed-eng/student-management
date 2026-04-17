@@ -61,24 +61,16 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
+                    echo "🐳 Building Docker image..."
                     docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                    docker tag $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:latest
                 '''
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push $IMAGE_NAME:$IMAGE_TAG
-                        docker logout
-                    '''
-                }
+                echo "⏭️ Skipping Docker push (local Minikube)"
             }
         }
 
@@ -93,6 +85,9 @@ pipeline {
                     echo "📂 Applying Kubernetes manifests..."
                     kubectl apply -f k8s/ -n $K8S_NAMESPACE
 
+                    echo "🔄 Restart pods..."
+                    kubectl delete pod -l app=spring-app -n $K8S_NAMESPACE || true
+
                     echo "🚀 Updating deployment image..."
                     kubectl set image deployment/$DEPLOYMENT_NAME \
                     $CONTAINER_NAME=$IMAGE_NAME:$IMAGE_TAG \
@@ -100,7 +95,7 @@ pipeline {
 
                     echo "⏳ Waiting for rollout..."
                     kubectl rollout status deployment/$DEPLOYMENT_NAME \
-                    -n $K8S_NAMESPACE --timeout=300s
+                    -n $K8S_NAMESPACE --timeout=120s
                 '''
             }
         }
